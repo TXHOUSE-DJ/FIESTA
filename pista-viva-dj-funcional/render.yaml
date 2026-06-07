@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: pista-viva-dj
+    env: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: ADMIN_MASTER_PIN
+        value: ""
