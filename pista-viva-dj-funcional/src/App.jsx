@@ -35,7 +35,30 @@ import {
 function cls(...items) {
   return items.filter(Boolean).join(' ');
 }
-
+function Brand({ compact = false }) {
+  return (
+    <div className={cls('flex items-center justify-center gap-3', compact && 'gap-2')}>
+      <div
+        className={cls(
+          'grid place-items-center rounded-2xl border border-neonCyan/40 bg-gradient-to-br from-neonCyan/25 via-neonViolet/20 to-neonPink/25 font-black text-white shadow-neonCyan',
+          compact ? 'h-10 w-10 text-sm' : 'h-14 w-14 text-xl'
+        )}
+      >
+        DJ
+      </div>
+      <div className="leading-none">
+        <div className={cls('font-black tracking-wide text-white', compact ? 'text-lg' : 'text-3xl')}>
+          Pista Viva <span className="text-neonPink">DJ</span>
+        </div>
+        {!compact && (
+          <div className="mt-1 text-xs font-bold uppercase tracking-[0.28em] text-neonCyan">
+            Juegos · Energía · Show
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 function apiOrigin() {
   const explicit = import.meta.env.VITE_API_URL;
   if (explicit) return explicit.replace(/\/$/, '');
