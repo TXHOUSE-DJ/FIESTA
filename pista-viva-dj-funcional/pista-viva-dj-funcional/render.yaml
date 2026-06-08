@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: fiesta
+    env: node
+    plan: free
+    rootDir: pista-viva-dj-funcional
+    buildCommand: corepack enable && corepack prepare pnpm@9.15.4 --activate && pnpm install --no-frozen-lockfile && pnpm run build
+    startCommand: node server/index.js
+    envVars:
+      - key: NODE_VERSION
+        value: 20.18.0

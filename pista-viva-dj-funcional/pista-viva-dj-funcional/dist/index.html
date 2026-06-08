@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#02030a" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Pista Viva DJ" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link id="pista-manifest" rel="manifest" href="/manifest-public.webmanifest" />
+    <link id="pista-apple-icon" rel="apple-touch-icon" href="/icons/public-192.png" />
+    <script>
+      (function () {
+        var path = window.location.pathname || '';
+        var isDj = path.indexOf('/cabina') === 0;
+        var manifest = isDj ? '/manifest-dj.webmanifest' : '/manifest-public.webmanifest';
+        var icon = isDj ? '/icons/dj-192.png' : '/icons/public-192.png';
+        var manifestLink = document.getElementById('pista-manifest');
+        var appleIcon = document.getElementById('pista-apple-icon');
+        if (manifestLink) manifestLink.setAttribute('href', manifest);
+        if (appleIcon) appleIcon.setAttribute('href', icon);
+      })();
+    </script>
+    <title>Pista Viva DJ</title>
+    <script type="module" crossorigin src="/assets/index-BOSZtKaj.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-Vio-IeEQ.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
