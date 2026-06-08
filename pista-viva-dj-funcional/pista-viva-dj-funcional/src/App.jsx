@@ -466,23 +466,31 @@ function getDashboardUrl(eventId) {
 
 function CastDashboardPanel({ eventId, compact = false }) {
   const [status, setStatus] = useState('');
+  const dashboardUrl = getDashboardUrl(eventId);
 
   async function copyLink() {
-    const url = getDashboardUrl(eventId);
     try {
-      await navigator.clipboard.writeText(url);
+      await navigator.clipboard.writeText(dashboardUrl);
       setStatus('Link del dashboard copiado.');
     } catch {
-      setStatus(url);
+      setStatus(dashboardUrl);
+    }
+  }
+
+  function openHdmiDashboard() {
+    const popup = window.open(dashboardUrl, 'pista-viva-dashboard-hdmi', 'popup=yes,width=1920,height=1080');
+    if (popup) {
+      popup.focus();
+      setStatus('Modo HDMI abierto: poné esa ventana en la TV, F11 y zoom 100%. Solo se ve el dashboard.');
+    } else {
+      setStatus('El navegador bloqueó la ventana. Copiá el link y abrilo en la notebook conectada por HDMI.');
     }
   }
 
   async function projectDashboard() {
-    const url = getDashboardUrl(eventId);
-
     if ('PresentationRequest' in window) {
       try {
-        const request = new window.PresentationRequest([url]);
+        const request = new window.PresentationRequest([dashboardUrl]);
         await request.start();
         setStatus('Dashboard enviado a la pantalla disponible.');
         return;
@@ -494,13 +502,7 @@ function CastDashboardPanel({ eventId, compact = false }) {
       }
     }
 
-    const popup = window.open(url, 'pista-viva-dashboard', 'popup=yes,width=1440,height=900');
-    if (popup) {
-      popup.focus();
-      setStatus('Se abrió solo el dashboard. En Chrome podés enviarlo al TV con “Transmitir”.');
-    } else {
-      setStatus('El navegador bloqueó la ventana. Permití popups o copiá el link.');
-    }
+    openHdmiDashboard();
   }
 
   return (
@@ -510,21 +512,33 @@ function CastDashboardPanel({ eventId, compact = false }) {
           <Cast size={30} />
         </div>
         <div className="min-w-0 flex-1">
-          <div className="text-xs font-black uppercase tracking-[0.18em] text-neonCyan">Proyección TV</div>
-          <h2 className={cls('font-black text-white', compact ? 'text-lg' : 'text-2xl')}>Compartir solo el dashboard en vivo</h2>
+          <div className="text-xs font-black uppercase tracking-[0.18em] text-neonCyan">TV / HDMI</div>
+          <h2 className={cls('font-black text-white', compact ? 'text-lg' : 'text-2xl')}>Abrir solo dashboard para pantalla</h2>
           <p className="mt-1 text-sm text-softText">
-            No comparte la cabina ni los controles del DJ. Abre/proyecta únicamente la pantalla pública con ranking, QR, mensajes, energía y votaciones.
+            La notebook conectada por HDMI muestra únicamente el dashboard. La cabina DJ y sus controles quedan separados en tu celular o en otra pestaña.
           </p>
+
           <div className="mt-4 grid gap-2 sm:grid-cols-2">
-            <button type="button" onClick={projectDashboard} className="neon-button flex items-center justify-center gap-2">
-              <Cast size={20} /> Conectar TV
+            <button type="button" onClick={openHdmiDashboard} className="neon-button flex items-center justify-center gap-2">
+              <MonitorPlay size={20} /> Abrir modo HDMI
             </button>
-            <button type="button" onClick={copyLink} className="soft-button">
-              Copiar link dashboard
+            <button type="button" onClick={projectDashboard} className="soft-button flex items-center justify-center gap-2">
+              <Cast size={20} /> Conectar / transmitir
+            </button>
+            <button type="button" onClick={copyLink} className="soft-button sm:col-span-2">
+              Copiar link solo dashboard
             </button>
           </div>
+
+          <div className="mt-4 grid gap-2 rounded-2xl border border-white/10 bg-black/30 p-3 text-xs font-bold text-softText">
+            <p><span className="text-neonCyan">1.</span> Conectá la notebook a la TV por HDMI.</p>
+            <p><span className="text-neonCyan">2.</span> Tocá “Abrir modo HDMI”.</p>
+            <p><span className="text-neonCyan">3.</span> En esa ventana usá F11 y zoom 100%.</p>
+            <p><span className="text-neonCyan">4.</span> Manejá la cabina desde el celular.</p>
+          </div>
+
           {status && <p className="mt-3 rounded-2xl border border-white/10 bg-black/30 p-3 text-xs font-bold text-softText">{status}</p>}
-          <p className="mt-2 break-all text-[11px] text-softText">{getDashboardUrl(eventId)}</p>
+          <p className="mt-2 break-all text-[11px] text-softText">{dashboardUrl}</p>
         </div>
       </div>
     </div>
@@ -608,6 +622,78 @@ function Field({ icon: Icon, label, className = '', ...props }) {
         <input className={cls('field', Icon && 'pl-11')} {...props} />
       </span>
     </label>
+  );
+}
+
+
+function PinCodeInput({ value, onChange, length = 4, disabled = false, autoFocus = false }) {
+  const inputsRef = useRef([]);
+
+  const clean = (next) => String(next || '').replace(/\D/g, '').slice(0, length);
+
+  function setValue(next) {
+    onChange(clean(next));
+  }
+
+  function focusIndex(index) {
+    const input = inputsRef.current[index];
+    if (input) {
+      window.setTimeout(() => {
+        input.focus();
+        input.select();
+      }, 0);
+    }
+  }
+
+  function handleChange(index, event) {
+    const digit = event.target.value.replace(/\D/g, '').slice(-1);
+    const chars = value.padEnd(length, ' ').split('');
+    chars[index] = digit || ' ';
+    const next = clean(chars.join(''));
+    setValue(next);
+    if (digit && index < length - 1) focusIndex(index + 1);
+  }
+
+  function handleKeyDown(index, event) {
+    if (event.key === 'Backspace' && !value[index] && index > 0) {
+      focusIndex(index - 1);
+    }
+    if (event.key === 'ArrowLeft' && index > 0) focusIndex(index - 1);
+    if (event.key === 'ArrowRight' && index < length - 1) focusIndex(index + 1);
+  }
+
+  function handlePaste(event) {
+    event.preventDefault();
+    const pasted = event.clipboardData.getData('text');
+    setValue(pasted);
+    const nextLength = clean(pasted).length;
+    focusIndex(Math.min(nextLength, length - 1));
+  }
+
+  return (
+    <div className="grid grid-cols-4 gap-3" role="group" aria-label="PIN de 4 números">
+      {Array.from({ length }).map((_, index) => (
+        <input
+          key={index}
+          ref={(node) => { inputsRef.current[index] = node; }}
+          type="text"
+          inputMode="numeric"
+          pattern="[0-9]*"
+          autoComplete="off"
+          autoCorrect="off"
+          spellCheck="false"
+          aria-label={`Número ${index + 1} del PIN`}
+          disabled={disabled}
+          autoFocus={autoFocus && index === 0}
+          maxLength={1}
+          value={value[index] || ''}
+          onChange={(event) => handleChange(index, event)}
+          onKeyDown={(event) => handleKeyDown(index, event)}
+          onPaste={handlePaste}
+          className="h-16 rounded-3xl border border-neonCyan/30 bg-black/35 text-center text-3xl font-black text-white outline-none transition focus:border-neonPink focus:ring-2 focus:ring-neonPink/30 disabled:opacity-50"
+        />
+      ))}
+    </div>
   );
 }
 
@@ -1177,25 +1263,39 @@ function PublicApp({ pista }) {
 
 function AdminLogin({ apiOrigin, eventId, onLogin }) {
   const sessionKey = `pista_admin_pin_${eventId}`;
-  const [pin, setPin] = useState(sessionStorage.getItem(sessionKey) || '');
+  const [pin, setPin] = useState('');
   const [error, setError] = useState('');
+  const [checking, setChecking] = useState(false);
 
-  async function submit(event) {
-    event.preventDefault();
+  async function submitPin(nextPin = pin) {
+    const cleanPin = String(nextPin || '').replace(/\D/g, '').slice(0, 4);
+    if (cleanPin.length !== 4 || checking) return;
+    setChecking(true);
     setError('');
-    const response = await fetch(`${apiOrigin}/api/admin/auth`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pin, eventId }),
-    });
-    const data = await response.json();
-    if (!data.ok) {
-      setError(data.message || 'PIN incorrecto.');
-      return;
+    try {
+      const response = await fetch(`${apiOrigin}/api/admin/auth`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin: cleanPin, eventId }),
+      });
+      const data = await response.json();
+      if (!data.ok) {
+        setError(data.message || 'PIN incorrecto.');
+        setPin('');
+        return;
+      }
+      sessionStorage.setItem(sessionKey, cleanPin);
+      onLogin(cleanPin);
+    } catch {
+      setError('No se pudo conectar con el servidor.');
+    } finally {
+      setChecking(false);
     }
-    sessionStorage.setItem(sessionKey, pin);
-    onLogin(pin);
   }
+
+  useEffect(() => {
+    if (pin.length === 4) submitPin(pin);
+  }, [pin]);
 
   return (
     <div className="app-shell">
@@ -1205,11 +1305,19 @@ function AdminLogin({ apiOrigin, eventId, onLogin }) {
         <Panel className="glow-border mt-5">
           <Lock className="mb-3 text-neonPink" size={38} />
           <h1 className="text-3xl font-black">Cabina DJ</h1>
-          <p className="mt-2 text-softText">Ingresá el PIN para controlar el evento en vivo.</p>
-          <form onSubmit={submit} className="mt-5 space-y-3">
-            <Field icon={Lock} type="password" placeholder="PIN de cabina" value={pin} onChange={(e) => setPin(e.target.value)} />
+          <p className="mt-2 text-softText">Ingresá el PIN de 4 números. Al completar los 4 casilleros, entra automáticamente.</p>
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              submitPin(pin);
+            }}
+            autoComplete="off"
+            className="mt-5 space-y-4"
+          >
+            <PinCodeInput value={pin} onChange={setPin} disabled={checking} autoFocus />
+            {checking && <p className="rounded-2xl border border-neonCyan/30 bg-neonCyan/10 p-3 text-center text-sm font-black text-neonCyan">Verificando PIN...</p>}
             {error && <p className="rounded-2xl border border-red-400/40 bg-red-400/10 p-3 text-sm font-bold text-red-100">{error}</p>}
-            <Button type="submit" className="w-full">Entrar a cabina</Button>
+            <Button type="submit" className="w-full" disabled={pin.length !== 4 || checking}>Entrar a cabina</Button>
           </form>
         </Panel>
       </div>
@@ -2778,38 +2886,38 @@ function slugifyClient(value) {
 
 function EventLanding() {
   const origin = useMemo(apiOrigin, []);
-  const [form, setForm] = useState({
-    title: '',
-    djName: '',
-    eventId: '',
-    pin: '',
-  });
+  const [roomName, setRoomName] = useState('');
+  const [pin, setPin] = useState('');
   const [existing, setExisting] = useState('');
   const [error, setError] = useState('');
+  const [creating, setCreating] = useState(false);
 
-  const cleanEventId = slugifyClient(form.eventId || form.title);
+  const cleanEventId = slugifyClient(roomName);
 
   async function createEvent(event) {
     event.preventDefault();
     setError('');
+    const cleanPin = String(pin || '').replace(/\D/g, '').slice(0, 4);
+
     if (!cleanEventId) {
-      setError('Poné un nombre o código para el evento.');
+      setError('Poné un nombre para la sala. Ejemplo: FLOR-15.');
       return;
     }
-    if (String(form.pin || '').trim().length < 4) {
-      setError('El PIN debe tener al menos 4 caracteres.');
+    if (cleanPin.length !== 4) {
+      setError('El PIN debe tener exactamente 4 números.');
       return;
     }
 
+    setCreating(true);
     try {
       const response = await fetch(`${origin}/api/events`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title: form.title || 'Pista Viva DJ',
-          djName: form.djName || 'DJ en vivo',
+          title: roomName || 'Pista Viva DJ',
+          djName: 'DJ en vivo',
           eventId: cleanEventId,
-          pin: form.pin,
+          pin: cleanPin,
         }),
       });
       const data = await response.json();
@@ -2817,9 +2925,12 @@ function EventLanding() {
         setError(data.message || 'No se pudo crear el evento.');
         return;
       }
+      sessionStorage.setItem(`pista_admin_pin_${data.event.id}`, cleanPin);
       window.location.href = `/cabina/${data.event.id}`;
     } catch {
       setError('No se pudo conectar con el servidor.');
+    } finally {
+      setCreating(false);
     }
   }
 
@@ -2827,7 +2938,7 @@ function EventLanding() {
     event.preventDefault();
     const id = slugifyClient(existing);
     if (!id) {
-      setError('Ingresá el código del evento.');
+      setError('Ingresá el nombre de la sala.');
       return;
     }
     window.location.href = `/cabina/${id}`;
@@ -2841,34 +2952,70 @@ function EventLanding() {
           <InstallAppButton type="public" compact />
           <InstallAppButton type="dj" compact />
         </div>
+
         <Panel className="glow-border mt-6">
           <div className="mb-4 inline-flex rounded-full border border-neonGreen/30 bg-neonGreen/10 px-3 py-1 text-xs font-black uppercase tracking-[0.18em] text-neonGreen">
             Multi-evento seguro
           </div>
-          <h1 className="text-3xl font-black">Crear sala independiente</h1>
+          <h1 className="text-3xl font-black">Crear sala</h1>
           <p className="mt-2 text-sm text-softText">
-            Cada fiesta tiene su propio link, cabina, PIN, QR, pantalla show, pedidos y mensajes. Nada se mezcla con otra fiesta.
+            Poné un nombre fácil para la fiesta y un PIN de 4 números para la cabina DJ. No usamos campo contraseña, así no aparece el aviso de guardar clave.
           </p>
 
-          <form onSubmit={createEvent} className="mt-5 space-y-3">
-            <Field label="Nombre del evento" placeholder="Ej: Feliz cumple Flor" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} maxLength={60} />
-            <Field label="Nombre del DJ" placeholder="Ej: DJ Nico" value={form.djName} onChange={(e) => setForm({ ...form, djName: e.target.value })} maxLength={60} />
-            <Field label="Código de evento" placeholder="Ej: flor-15" value={form.eventId} onChange={(e) => setForm({ ...form, eventId: e.target.value })} maxLength={48} />
+          <form onSubmit={createEvent} autoComplete="off" className="mt-5 space-y-4">
+            <Field
+              label="Nombre de la sala"
+              placeholder="Ej: FLOR-15"
+              value={roomName}
+              onChange={(event) => setRoomName(event.target.value.toUpperCase())}
+              maxLength={48}
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck="false"
+            />
             <div className="rounded-2xl border border-white/10 bg-black/25 p-3 text-xs font-bold text-softText">
-              Link público: <span className="text-neonCyan">/e/{cleanEventId || 'tu-evento'}</span>
+              Link público: <span className="text-neonCyan">/e/{cleanEventId || 'flor-15'}</span>
             </div>
-            <Field label="PIN privado de cabina" type="password" placeholder="Mínimo 4 números o letras" value={form.pin} onChange={(e) => setForm({ ...form, pin: e.target.value })} maxLength={24} />
+
+            <div className="space-y-2">
+              <div className="text-sm font-bold text-white/90">PIN DJ de 4 números</div>
+              <PinCodeInput value={pin} onChange={setPin} />
+              <p className="text-xs font-bold text-softText">Usalo para entrar a la cabina. Ejemplo: 1234.</p>
+            </div>
+
             {error && <p className="rounded-2xl border border-red-400/40 bg-red-400/10 p-3 text-sm font-bold text-red-100">{error}</p>}
-            <Button type="submit" className="w-full">Crear evento y abrir cabina</Button>
+            <Button type="submit" className="w-full" disabled={creating || pin.length !== 4}>
+              {creating ? 'Creando sala...' : 'Crear sala y abrir cabina'}
+            </Button>
           </form>
         </Panel>
 
         <Panel className="mt-4">
-          <h2 className="text-xl font-black">Abrir evento existente</h2>
-          <form onSubmit={openExisting} className="mt-3 grid gap-3">
-            <Field placeholder="Código del evento, ej: flor-15" value={existing} onChange={(e) => setExisting(e.target.value)} />
+          <h2 className="text-xl font-black">Abrir sala existente</h2>
+          <form onSubmit={openExisting} autoComplete="off" className="mt-3 grid gap-3">
+            <Field
+              placeholder="Nombre de sala, ej: FLOR-15"
+              value={existing}
+              onChange={(event) => setExisting(event.target.value.toUpperCase())}
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck="false"
+            />
             <Button type="submit" variant="secondary" className="w-full">Abrir cabina</Button>
           </form>
+        </Panel>
+
+        <Panel className="mt-4 glow-border">
+          <div className="mb-3 flex items-center gap-3">
+            <MonitorPlay className="text-neonCyan" />
+            <h2 className="text-xl font-black">Pantalla TV / HDMI</h2>
+          </div>
+          <p className="text-sm font-bold text-softText">
+            Para máxima calidad: conectá una notebook por HDMI a la TV y abrí solo el dashboard de pantalla. La cabina se maneja desde el celular.
+          </p>
+          <div className="mt-3 rounded-2xl border border-neonCyan/25 bg-neonCyan/10 p-3 text-xs font-black text-neonCyan">
+            Luego de crear la sala vas a tener el botón “Abrir modo HDMI / solo dashboard” dentro de Cabina → Show.
+          </div>
         </Panel>
 
         <Panel className="mt-4">

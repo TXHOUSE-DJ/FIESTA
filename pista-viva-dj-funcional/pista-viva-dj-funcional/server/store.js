@@ -231,9 +231,9 @@ function createEvent(store, { eventId, title, djName, pin }) {
     error.status = 409;
     throw error;
   }
-  const cleanPin = text(pin, 24);
-  if (cleanPin.length < 4) {
-    const error = new Error('El PIN debe tener al menos 4 caracteres.');
+  const cleanPin = String(pin || '').replace(/\D/g, '').slice(0, 4);
+  if (!/^\d{4}$/.test(cleanPin)) {
+    const error = new Error('El PIN debe tener exactamente 4 números.');
     error.status = 400;
     throw error;
   }
